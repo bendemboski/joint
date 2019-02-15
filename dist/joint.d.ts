@@ -1,4 +1,4 @@
-/*! JointJS v2.2.1 (2018-11-12) - JavaScript diagramming library
+/*! JointJS v2.2.1 (2019-02-15) - JavaScript diagramming library
 
 
 This Source Code Form is subject to the terms of the Mozilla Public
@@ -94,6 +94,12 @@ export namespace g {
 
         closestPointTangent(p: Point): Line | null;
 
+        divideAt(ratio: number, opt?: SubdivisionsOpt): [Segment, Segment];
+
+        divideAtLength(length: number, opt?: SubdivisionsOpt): [Segment, Segment];
+
+        divideAtT(t: number): [Segment, Segment];
+
         equals(segment: Segment): boolean;
 
         getSubdivisions(): Curve[];
@@ -135,7 +141,11 @@ export namespace g {
 
     type RectangleSide = 'left' | 'right' | 'top' | 'bottom';
 
-    type SegmentType = 'L' | 'C' | 'M' | 'Z';
+    type PathSegmentUnit = Segment | Segment[];
+
+    type PathObjectUnit = Line | Line[] | Curve | Curve[];
+
+    type SegmentType = 'L' | 'C' | 'M' | 'Z' | 'z';
 
     export function normalizeAngle(angle: number): number;
 
@@ -169,7 +179,12 @@ export namespace g {
 
         closestPointTangent(p: PlainPoint, opt?: SubdivisionsOpt): Line | null;
 
-        divide(t: number): [Curve, Curve];
+        divideAt(ratio: number, opt?: SubdivisionsOpt): [Curve, Curve];
+
+        divideAtLength(length: number, opt?: SubdivisionsOpt): [Curve, Curve];
+
+        divideAtT(t: number): [Curve, Curve];
+        divide(t: number): [Curve, Curve]; // alias to `divideAtT`
 
         endpointDistance(): number;
 
@@ -273,6 +288,10 @@ export namespace g {
 
         closestPointTangent(p: PlainPoint | string): Line | null;
 
+        divideAt(t: number): [Line, Line];
+
+        divideAtLength(length: number): [Line, Line];
+
         equals(line: Line): boolean;
 
         intersect(line: Line): Point | null; // Backwards compatibility, should return an array
@@ -326,15 +345,11 @@ export namespace g {
 
         constructor();
         constructor(pathData: string);
-        constructor(segments: Segment[]);
-        constructor(objects: (Line | Curve)[]);
-        constructor(segment: Segment);
-        constructor(line: Line);
-        constructor(curve: Curve);
+        constructor(segments: PathSegmentUnit | PathSegmentUnit[]);
+        constructor(objects: PathObjectUnit | PathObjectUnit[]);
         constructor(polyline: Polyline);
 
-        appendSegment(segment: Segment): void;
-        appendSegment(segments: Segment[]): void;
+        appendSegment(segments: PathSegmentUnit | PathSegmentUnit[]): void;
 
         bbox(): Rect | null;
 
@@ -348,14 +363,17 @@ export namespace g {
 
         closestPointTangent(p: Point, opt?: SegmentSubdivisionsOpt): Line | null;
 
+        divideAt(ratio: number, opt?: SegmentSubdivisionsOpt): [Path, Path] | null;
+
+        divideAtLength(length: number, opt?: SegmentSubdivisionsOpt): [Path, Path] | null;
+
         equals(p: Path): boolean;
 
         getSegment(index: number): Segment | null;
 
         getSegmentSubdivisions(opt?: PrecisionOpt): Curve[][];
 
-        insertSegment(index: number, segment: Segment): void;
-        insertSegment(index: number, segments: Segment[]): void;
+        insertSegment(index: number, segments: PathSegmentUnit | PathSegmentUnit[]): void;
 
         intersectionWithLine(l: Line, opt?: SegmentSubdivisionsOpt): Point[] | null;
 
@@ -371,8 +389,7 @@ export namespace g {
 
         removeSegment(index: number): void;
 
-        replaceSegment(index: number, segment: Segment): void;
-        replaceSegment(index: number, segments: Segment[]): void;
+        replaceSegment(index: number, segments: PathSegmentUnit | PathSegmentUnit[]): void;
 
         scale(sx: number, sy: number, origin?: PlainPoint | string): this;
 
@@ -411,7 +428,7 @@ export namespace g {
 
         private updateSubpathStartSegment(segment: Segment): void;
 
-        static createSegment(type: SegmentType, ...args: any[]): Segment;
+        static createSegment(type: SegmentType, ...args: any[]): PathSegmentUnit;
 
         static parse(pathData: string): Path;
 
@@ -1683,18 +1700,20 @@ export namespace dia {
         interface VertexOptions extends Cell.Options {
 
         }
-    }
 
-    class LinkView extends CellViewGeneric<Link> {
-
-        options: {
+        interface Options extends mvc.ViewOptions<Link> {
             shortLinkLength?: number,
             doubleLinkTools?: boolean,
             longLinkLength?: number,
             linkToolsOffset?: number,
             doubleLinkToolsOffset?: number,
             sampleInterval?: number
-        };
+        }
+    }
+
+    class LinkView extends CellViewGeneric<Link> {
+
+        options: LinkView.Options;
 
         sendToken(token: SVGElement, duration?: number, callback?: () => void): void;
         sendToken(token: SVGElement, opt?: { duration?: number, direction?: string; connection?: string }, callback?: () => void): void;
@@ -2083,7 +2102,7 @@ export namespace dia {
 
     namespace ToolsView {
 
-        interface Options {
+        interface Options extends mvc.ViewOptions<undefined> {
             tools?: dia.ToolView[];
             name?: string | null;
             relatedView?: dia.CellView;
@@ -3336,6 +3355,8 @@ export namespace mvc {
     class View<T extends Backbone.Model> extends Backbone.View<T> {
 
         constructor(opt?: ViewOptions<T>);
+
+        options: ViewOptions<T>;
 
         theme: string;
 
