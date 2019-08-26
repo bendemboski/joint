@@ -784,11 +784,11 @@ joint.dia.Paper = joint.mvc.View.extend({
         var cells = this.model.get('cells');
 
         joint.util.sortElements($cells, function(a, b) {
-
-            var cellA = cells.get($(a).attr('model-id'));
-            var cellB = cells.get($(b).attr('model-id'));
-
-            return (cellA.get('z') || 0) > (cellB.get('z') || 0) ? 1 : -1;
+            var cellA = cells.get(a.getAttribute('model-id'));
+            var cellB = cells.get(b.getAttribute('model-id'));
+            var zA = cellA.get('z') || 0;
+            var zB = cellB.get('z') || 0;
+            return (zA === zB) ? 0 : (zA < zB) ? -1 : 1;
         });
     },
 
